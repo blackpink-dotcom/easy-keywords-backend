@@ -1,0 +1,12 @@
+{
+  "name": "easy-keywords-backend",
+  "version": "1.0.0",
+  "description": "Backend for Easy Keywords Chrome Extension",
+  "scripts": {
+    "start": "node api/keywords.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
