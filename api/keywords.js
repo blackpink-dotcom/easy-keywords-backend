@@ -1,171 +1,158 @@
-// File: api/keywords.js
-// SIMPLE VERSION - No Firebase, No Database
+// api/keywords.js - FIXED VERSION
 const express = require('express');
-const cors = require('cors');
 
+// Create Express app
 const app = express();
-app.use(cors());
+
+// Enable CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
+// Parse JSON
 app.use(express.json());
 
-// ============================================
-// FAKE AI KEYWORD GENERATOR (No API Key Needed)
-// ============================================
-class FakeAIService {
-    generateKeywords(title, category = 'general') {
-        if (!title) {
-            return this.getFallbackKeywords();
-        }
-
-        const keywords = new Set();
-        const titleLower = title.toLowerCase();
-        
-        // Extract words from title
-        titleLower.split(/[\s,.]+/).forEach(word => {
-            if (word.length > 3) keywords.add(word);
-        });
-        
-        // Add category-based keywords
-        const categoryKeywords = {
-            technology: ['digital', 'tech', 'computer', 'innovation', 'future', 'ai', 'software', 'hardware'],
-            nature: ['nature', 'landscape', 'forest', 'tree', 'environment', 'green', 'eco', 'sustainable'],
-            business: ['business', 'office', 'corporate', 'professional', 'success', 'teamwork', 'meeting'],
-            people: ['people', 'portrait', 'smile', 'happy', 'person', 'face', 'family', 'community'],
-            art: ['art', 'creative', 'design', 'abstract', 'colorful', 'painting', 'illustration', 'graphic']
-        };
-        
-        // Add keywords based on category
-        if (categoryKeywords[category]) {
-            categoryKeywords[category].forEach(kw => keywords.add(kw));
-        }
-        
-        // Add general keywords
-        const generalKeywords = [
-            'creative', 'design', 'background', 'modern', 'concept',
-            'innovation', 'technology', 'digital', 'abstract', 'graphic',
-            'visual', 'contemporary', 'minimal', 'professional', 'solution'
-        ];
-        
-        generalKeywords.forEach(kw => keywords.add(kw));
-        
-        // Return 20-30 keywords
-        return Array.from(keywords).slice(0, 30);
+// ================ FAKE AI GENERATOR ================
+function generateKeywords(title) {
+  if (!title || title.trim() === '') {
+    return [
+      'digital', 'art', 'creative', 'design', 'innovation',
+      'technology', 'background', 'abstract', 'modern', 'concept'
+    ];
+  }
+  
+  const keywords = new Set();
+  const titleLower = title.toLowerCase();
+  
+  // Add words from title
+  titleLower.split(/[\s,.]+/).forEach(word => {
+    if (word.length > 3) {
+      keywords.add(word);
     }
-    
-    getFallbackKeywords() {
-        return [
-            'digital', 'art', 'creative', 'design', 'innovation',
-            'technology', 'background', 'abstract', 'modern', 'concept',
-            'graphic', 'visual', 'contemporary', 'minimal', 'professional'
-        ];
-    }
+  });
+  
+  // Add related keywords
+  const related = [
+    'digital', 'art', 'creative', 'design', 'innovation',
+    'technology', 'background', 'abstract', 'modern', 'concept',
+    'graphic', 'visual', 'contemporary', 'minimal', 'professional'
+  ];
+  
+  related.forEach(keyword => keywords.add(keyword));
+  
+  return Array.from(keywords).slice(0, 30);
 }
 
-// ============================================
-// API ENDPOINTS
-// ============================================
+// ================ API ENDPOINTS ================
 
-const aiService = new FakeAIService();
+// 1. ROOT ENDPOINT - Fix "Cannot GET /"
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Easy Keywords Backend API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      generate: '/api/keywords/generate (POST)',
+      test: '/api/test'
+    },
+    usage: 'Send POST request to /api/keywords/generate with { "title": "your title" }'
+  });
+});
 
-// 1. Health Check - Test if server is working
+// 2. HEALTH CHECK
 app.get('/api/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        version: '1.0.0',
-        message: 'Easy Keywords Backend is working!',
-        timestamp: new Date().toISOString(),
-        free: true
-    });
+  console.log('Health check requested');
+  res.json({
+    status: 'healthy',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    service: 'Easy Keywords Backend',
+    uptime: process.uptime()
+  });
 });
 
-// 2. Generate Keywords - MAIN ENDPOINT
-app.post('/api/keywords/generate', (req, res) => {
-    try {
-        const { title, description, category } = req.body;
-        
-        console.log('📝 Generating keywords for:', title || 'No title');
-        
-        const keywords = aiService.generateKeywords(title || description, category || 'general');
-        
-        res.json({
-            success: true,
-            keywords: keywords,
-            count: keywords.length,
-            processingTime: 0.1,
-            model: 'local-generator',
-            message: 'Keywords generated successfully!'
-        });
-        
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            fallbackKeywords: aiService.getFallbackKeywords()
-        });
-    }
-});
-
-// 3. Simple Test Endpoint
+// 3. TEST ENDPOINT
 app.get('/api/test', (req, res) => {
-    res.json({
-        success: true,
-        message: 'Easy Keywords API is working!',
-        endpoints: [
-            'GET /api/health',
-            'POST /api/keywords/generate',
-            'GET /api/test',
-            'GET /api/sample-keywords'
-        ]
-    });
+  res.json({
+    success: true,
+    message: 'API is working!',
+    endpoints: [
+      'GET /api/health',
+      'POST /api/keywords/generate',
+      'GET /api/test'
+    ],
+    example: {
+      url: '/api/keywords/generate',
+      method: 'POST',
+      body: { "title": "Digital art background" }
+    }
+  });
 });
 
-// 4. Sample Keywords for Testing
-app.get('/api/sample-keywords', (req, res) => {
-    const samples = [
-        {
-            title: "Sunset over mountains",
-            keywords: ["sunset", "mountains", "landscape", "nature", "sky", "evening", "scenic", "view"]
-        },
-        {
-            title: "Digital technology background",
-            keywords: ["digital", "technology", "background", "abstract", "tech", "innovation", "future", "data"]
-        },
-        {
-            title: "Business meeting office",
-            keywords: ["business", "meeting", "office", "professional", "teamwork", "corporate", "work", "success"]
-        }
-    ];
+// 4. GENERATE KEYWORDS - MAIN ENDPOINT
+app.post('/api/keywords/generate', (req, res) => {
+  try {
+    console.log('Generate request received:', req.body);
+    
+    const { title, description } = req.body || {};
+    const inputText = title || description || '';
+    
+    const keywords = generateKeywords(inputText);
     
     res.json({
-        success: true,
-        samples: samples
+      success: true,
+      keywords: keywords,
+      count: keywords.length,
+      input: inputText || 'No input provided',
+      timestamp: new Date().toISOString()
     });
+    
+  } catch (error) {
+    console.error('Generation error:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      fallbackKeywords: [
+        'digital', 'art', 'creative', 'design', 'innovation',
+        'technology', 'background', 'abstract', 'modern', 'concept'
+      ]
+    });
+  }
 });
 
-// ============================================
-// START SERVER
-// ============================================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`
-    🚀 EASY KEYWORDS BACKEND STARTED!
-    =================================
-    📡 Local: http://localhost:${PORT}
-    📊 Health: http://localhost:${PORT}/api/health
-    🎯 Ready for Chrome Extension!
-    
-    🔧 Endpoints:
-    - POST /api/keywords/generate
-    - GET  /api/health
-    - GET  /api/test
-    
-    💡 Tip: Test with curl:
-    curl -X POST http://localhost:3000/api/keywords/generate \\
-      -H "Content-Type: application/json" \\
-      -d '{"title":"Digital art background"}'
-    =================================
-    `);
+// 5. CATCH-ALL FOR UNDEFINED ROUTES
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    requested: req.path,
+    available: [
+      '/',
+      '/api/health',
+      '/api/keywords/generate',
+      '/api/test'
+    ]
+  });
 });
 
-// Export for Vercel
+// ================ SERVER SETUP ================
+
+// For Vercel, we need to export the app
 module.exports = app;
+
+// Local development
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Health: http://localhost:${PORT}/api/health`);
+  });
+}
